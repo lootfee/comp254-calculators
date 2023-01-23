@@ -105,12 +105,16 @@ function calculateSubnetsAndHosts(ip, borrowedBits) {
 function createSubnetTable(ip, subnetsAndHosts) {
     // Get the number of subnets
     var totalSubnets = subnetsAndHosts.totalSubnets;
+    if (totalSubnets > 10){
+        totalSubnets = 10;
+    }
     // Create the table
     var table = "<table class='table table-bordered'><tr><th>Network Address</th><th>Usable Range</th><th>Broadcast Address</th></tr>";
     var networkAddressList = ip.split(".");
     var networkAddressFirst = networkAddressList.slice(0, -1);
     var networkAddressLast = parseInt(networkAddressList.at(-1));
     console.log("networkAddressLast " + networkAddressList.at(-1))
+
     for (var i = 0; i < totalSubnets; i++) {
             // Add a row to the table
             var networkAddress = networkAddressFirst.join(".") + "." + networkAddressLast;
