@@ -18,9 +18,19 @@ function getIPClass(ip) {
 }
 
 
-function calculateBorrowedBits(neededSubnets) {
+
+function calculateBorrowedBitsFromSubnet(neededSubnets) {
     // Get the number of subnet bits needed
     var borrowedBits = Math.ceil(Math.log2(neededSubnets));
+    return borrowedBits;
+}
+
+function calculateBorrowedBitsFromHost(ip, neededHost) {
+    var defaultSubnetMask = getSlashNotation(ip)
+    // Get the number of subnet bits needed
+    var borrowedBits = 32 - defaultSubnetMask - Math.ceil(Math.log2(neededHost));
+    console.log("log", Math.log2(neededHost))
+    console.log("defaultSubnetMask", defaultSubnetMask - Math.ceil(Math.log2(neededHost)))
     return borrowedBits;
 }
 
@@ -105,9 +115,9 @@ function calculateSubnetsAndHosts(ip, borrowedBits) {
 function createSubnetTable(ip, subnetsAndHosts) {
     // Get the number of subnets
     var totalSubnets = subnetsAndHosts.totalSubnets;
-    if (totalSubnets > 10){
-        totalSubnets = 10;
-    }
+    // if (totalSubnets > 100){
+    //     totalSubnets = 100;
+    // }
     // Create the table
     var table = "<table class='table table-bordered'><tr><th>Network Address</th><th>Usable Range</th><th>Broadcast Address</th></tr>";
     var networkAddressList = ip.split(".");
@@ -116,15 +126,37 @@ function createSubnetTable(ip, subnetsAndHosts) {
     console.log("networkAddressLast " + networkAddressList.at(-1))
 
     for (var i = 0; i < totalSubnets; i++) {
-            // Add a row to the table
             var networkAddress = networkAddressFirst.join(".") + "." + networkAddressLast;
             var firstHost = networkAddressLast + 1;
             var lastHost = networkAddressLast + subnetsAndHosts.usableHosts;
+            
             var firstHostAddress = networkAddressFirst.join(".") + "." + firstHost;
             var lastHostAddress = networkAddressFirst.join(".") + "." + lastHost;
             var broadcastAddress = networkAddressFirst.join(".") + "." + (lastHost + 1);
+
             table += "<tr><td>" + networkAddress + "</td><td>" + firstHostAddress + " - " + lastHostAddress + "</td><td>" + broadcastAddress + "</td></tr>";
+            
             networkAddressLast = lastHost + 2;
+
+            if (lastHost + 2 > 255){
+                networkAddressFirst[2] = parseInt(networkAddressFirst[2]) + 1;
+                networkAddressLast = 0;
+            }
+            
+            if (parseInt(networkAddressFirst[2]) > 255){
+                networkAddressFirst[1] = parseInt(networkAddressFirst[1]) + 1;
+                networkAddressFirst[2] = 0;
+                networkAddressLast = 0;
+            }
+            
+            if (parseInt(networkAddressFirst[1]) > 255){
+                networkAddressFirst[0] = parseInt(networkAddressFirst[0]) + 1;
+                networkAddressFirst[1] = 0;
+                networkAddressFirst[2] = 0;
+                networkAddressLast = 0;
+            }
+            
+            
             
         }
     table += "</table>";
@@ -137,10 +169,17 @@ document.getElementById("calculate").addEventListener('click', function (e) {
     var ip = document.getElementById("network-address").value;
     var neededSubnets = document.getElementById("needed-subnets").value;
     var neededUseableHosts = document.getElementById("needed-useable-hosts").value;
-    var borrowedBits = calculateBorrowedBits(neededSubnets);
+    var borrowedBits;
+    if (neededSubnets.trim().length > 0){
+        borrowedBits = calculateBorrowedBitsFromSubnet(neededSubnets);
+    }
+    else if (neededUseableHosts.trim().length > 0){
+        borrowedBits = calculateBorrowedBitsFromHost(ip, neededUseableHosts);
+    }
+    
     var ipClass =  getIPClass(ip);
     var subnetMasks = getSubnetMask(ip, borrowedBits);
-    var subnetsAndHosts = calculateSubnetsAndHosts(ip, borrowedBits, neededUseableHosts);
+    var subnetsAndHosts = calculateSubnetsAndHosts(ip, borrowedBits);
     document.getElementById("address-class").innerText = ipClass;
     document.getElementById("default-subnet-mask").innerText = subnetMasks.defaultSubnetMask + " (/" + subnetMasks.prefixNotation + ")";
     document.getElementById("custom-subnet-mask").innerText = subnetMasks.customSubnetMask;
