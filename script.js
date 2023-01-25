@@ -113,55 +113,67 @@ function calculateSubnetsAndHosts(ip, borrowedBits) {
 
 
 function createSubnetTable(ip, subnetsAndHosts) {
-    // Get the number of subnets
+    var newGrid = new gridjs.Grid({ 
+        columns: ['Network Address', 'Useable Range', 'Broadcast Address'],
+        data: [[]], 
+        pagination: {
+            limit: 10,
+            summary: true
+          }
+      }).render(document.getElementById('table-container'));
     var totalSubnets = subnetsAndHosts.totalSubnets;
-    // if (totalSubnets > 100){
-    //     totalSubnets = 100;
-    // }
-    // Create the table
-    var table = "<table class='table table-bordered'><tr><th>Network Address</th><th>Usable Range</th><th>Broadcast Address</th></tr>";
     var networkAddressList = ip.split(".");
-    var networkAddressFirst = networkAddressList.slice(0, -1);
-    var networkAddressLast = parseInt(networkAddressList.at(-1));
-    console.log("networkAddressLast " + networkAddressList.at(-1))
-
+    
+    var data = [];
     for (var i = 0; i < totalSubnets; i++) {
-            var networkAddress = networkAddressFirst.join(".") + "." + networkAddressLast;
-            var firstHost = networkAddressLast + 1;
-            var lastHost = networkAddressLast + subnetsAndHosts.usableHosts;
-            
-            var firstHostAddress = networkAddressFirst.join(".") + "." + firstHost;
-            var lastHostAddress = networkAddressFirst.join(".") + "." + lastHost;
-            var broadcastAddress = networkAddressFirst.join(".") + "." + (lastHost + 1);
+        var networkAddress = networkAddressList.join(".");
+        var firstHost = parseInt(networkAddressList[3]) + 1;
+        var firstHostAddress = networkAddressList.slice(0, -1).join(".") + "." + firstHost;
 
-            table += "<tr><td>" + networkAddress + "</td><td>" + firstHostAddress + " - " + lastHostAddress + "</td><td>" + broadcastAddress + "</td></tr>";
-            
-            networkAddressLast = lastHost + 2;
-
-            if (lastHost + 2 > 255){
-                networkAddressFirst[2] = parseInt(networkAddressFirst[2]) + 1;
-                networkAddressLast = 0;
-            }
-            
-            if (parseInt(networkAddressFirst[2]) > 255){
-                networkAddressFirst[1] = parseInt(networkAddressFirst[1]) + 1;
-                networkAddressFirst[2] = 0;
-                networkAddressLast = 0;
-            }
-            
-            if (parseInt(networkAddressFirst[1]) > 255){
-                networkAddressFirst[0] = parseInt(networkAddressFirst[0]) + 1;
-                networkAddressFirst[1] = 0;
-                networkAddressFirst[2] = 0;
-                networkAddressLast = 0;
-            }
-            
-            
-            
+        var lastHost = parseInt(networkAddressList[3]) + subnetsAndHosts.usableHosts;
+        
+        if (lastHost > 255){
+            networkAddressList[2] = parseInt(networkAddressList[2]) + Math.floor(lastHost / 255) - 1;
+            lastHost = 254;
         }
-    table += "</table>";
-    return table;
+        if (networkAddressList[2] > 255){
+            networkAddressList[1] = parseInt(networkAddressList[1]) + Math.floor(networkAddressList[2] / 255) - 1;
+            networkAddressList[2] = 254;
+        }
+        
+        
+        var lastHostAddress = networkAddressList.slice(0, -1).join(".") + "." + lastHost;
+        var broadcastAddress = networkAddressList.slice(0, -1).join(".") + "." + (lastHost + 1);
+        
+        data.push([networkAddress, firstHostAddress + " - " + lastHostAddress, broadcastAddress]);
+        console.log([networkAddress, firstHostAddress + " - " + lastHostAddress, broadcastAddress]);
+        
+        networkAddressList[3] = lastHost + 2;
+
+        if (lastHost + 2 > 255){
+            networkAddressList[2] = parseInt(networkAddressList[2]) + 1;
+            networkAddressList[3] = 0;
+        }
+        
+        if (parseInt(networkAddressList[2]) > 255){
+            networkAddressList[1] = parseInt(networkAddressList[1]) + 1;
+            networkAddressList[2] = 0;
+            networkAddressList[3] = 0;
+        }
+        
+        if (parseInt(networkAddressList[1]) > 255){
+            networkAddressList[0] = parseInt(networkAddressList[0]) + 1;
+            networkAddressList[1] = 0;
+            networkAddressList[2] = 0;
+            networkAddressList[3] = 0;
+        }
+    }
+    
+    newGrid.updateConfig({ 
+        data: data, 
+    }).forceRender();
 }
+
 
 
 document.getElementById("calculate").addEventListener('click', function (e) {
@@ -172,9 +184,11 @@ document.getElementById("calculate").addEventListener('click', function (e) {
     var borrowedBits;
     if (neededSubnets.trim().length > 0){
         borrowedBits = calculateBorrowedBitsFromSubnet(neededSubnets);
+        document.getElementById("needed-useable-hosts").value = "";
     }
     else if (neededUseableHosts.trim().length > 0){
         borrowedBits = calculateBorrowedBitsFromHost(ip, neededUseableHosts);
+        document.getElementById("needed-subnets").value = "";
     }
     
     var ipClass =  getIPClass(ip);
@@ -187,6 +201,6 @@ document.getElementById("calculate").addEventListener('click', function (e) {
     document.getElementById("total-host-address").innerText = subnetsAndHosts.totalHosts;
     document.getElementById("useable-hosts").innerText = subnetsAndHosts.usableHosts;
     document.getElementById("bits-borrowed").innerText = borrowedBits;
-
-    document.getElementById("table-container").innerHTML = createSubnetTable(ip, subnetsAndHosts);
+    createSubnetTable(ip, subnetsAndHosts);
+    //document.getElementById("table-container").innerHTML = createSubnetTable(ip, subnetsAndHosts);
 });
