@@ -138,7 +138,7 @@ function createSubnetTable(ip, subnetsAndHosts) {
         }
         if (networkAddressList[2] > 255){
             networkAddressList[1] = parseInt(networkAddressList[1]) + Math.floor(networkAddressList[2] / 255) - 1;
-            networkAddressList[2] = 254;
+            networkAddressList[2] = 255;
         }
         
         
